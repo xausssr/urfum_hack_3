@@ -54,12 +54,8 @@ def basic_process(data: pd.DataFrame, columns_cat: Dict[str, List[str]], drop: b
     data["last_work_years"] = 2023 - pd.to_datetime(data["JobStartDate"]).dt.year
     data["Position"] = data["Position"].str.lower().str.strip()
 
-    for col in columns_cat["raw_target"]:
-        data[col] = data[col].replace({"denied": 0, "success": 1, "error": 2})
-
     drop_rows = lambda row: row.isna().sum() == data.shape[1]
     data = data.drop(data[data.apply(drop_rows, axis=1)].index)
-    data = data.drop(columns=columns_cat["non_use"])
 
     if drop:
         data = data.drop(columns=["BirthDate", "JobStartDate"])
@@ -118,10 +114,7 @@ class ModelInference:
 
         self.columns_cat = dump_or_load_object(os.path.join(processor_path, "columns_cat.pkl"))
         self.post_columns = dump_or_load_object(os.path.join(processor_path, "post_columns_cat.pkl"))
-        self.basic_process = basic_process
-        self.process_nan = process_nan
         self.cat_preprocessor = dump_or_load_object(os.path.join(processor_path, "cat_preprocessor.pkl"))
-        self.add_features = add_features
 
         self.one_hot_preprocess = None
 
@@ -145,10 +138,10 @@ class ModelInference:
         Returns:
             (pd.DataFrame): данные, обогощенные фичами
         """
-        data = self.basic_process(data, self.columns_cat)
-        data = self.process_nan(data)
+        data = basic_process(data, self.columns_cat)
+        data = process_nan(data)
         data[self.columns_cat["cat"]] = self.cat_preprocessor.transform(data[self.columns_cat["cat"]].astype(str))
-        data = self.add_features(data)
+        data = add_features(data)
 
         if add_none:
             for col in data.columns:
@@ -178,13 +171,19 @@ class ModelInference:
             data = pd.concat([data, one_hot], axis=1)
         return data
 
-    def predict(x: pd.DataFrame) -> Dict[str, Any]:
-        """Предсказание модели для входных данных
+    def predict(self, x: pd.DataFrame, banks: List[str]) -> Dict[str, Any]:
+        """Предсказание модели для входных данных (с точки зрения вероятности одобрения)
 
         Args:
             x (pd.DataFrame): входные данные в формате pd.DataFrame (одна строка, пока без батчей)
+            banks (List[str]): список имен банков (для консистентности с API)
 
         Returns:
             Dict[str, Any]: словарь с пре-скорингом для каждого банка и коэффициентами шапа (важность полей анкеты)
         """
-        return {}
+
+        preprocessed_data = self.preprocess(x, add_none=False)
+        results = {}
+        for idx, clf in enumerate(self.models.values()):
+            results[banks[idx]] = clf.predict_proba(preprocessed_data)[0, 1]
+        return results

@@ -3,6 +3,8 @@ import sqlite3
 import time
 from datetime import datetime as dt
 
+import pandas as pd
+
 from core.worker_utils import verify_worker_table
 from model_inference import ModelInference
 
@@ -48,10 +50,21 @@ class Worker:
     def predict(self) -> None:
         """Получение пре-скоринга для задачи (self.last_task_id)"""
 
-        in_data = self.cursor_db.execute(f"SELECT * FROM features WHERE task_id='{self.task_id}';")
-        print(in_data)
-        self.last_task_id = None
-        return
+        # формирование строки pd.DataFrame
+        in_data = self.cursor_db.execute(f"SELECT * FROM features WHERE task_id='{self.last_task_id}';")
+        in_data = in_data.fetchall()[0][1:]
+        in_data = pd.DataFrame(
+            [in_data], columns=[self.settings["features_to_init"][x] for x in self.settings["features"]]
+        )
+        for col in self.inference.columns_cat["num"]:
+            if col in in_data.columns:
+                in_data[col] = in_data[col].astype(float)
+
+        # предикт
+        answ = self.inference.predict(in_data, banks=self.settings["banks"])
+        cols = ",".join([f"'{x}'" for x in answ.keys()])
+        values = ",".join([f"'{x}'" for x in answ.values()])
+        self.cursor_db.execute(f"INSERT INTO prescore ('task_id', {cols}) VALUES ('{self.last_task_id}', {values})")
         self.cursor_db.execute(
             f"UPDATE workers SET timestamp_end='{dt.now().timestamp()}' WHERE task_id='{self.last_task_id}'"
         )

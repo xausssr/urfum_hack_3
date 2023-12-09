@@ -1,5 +1,48 @@
 {
     "data_base": "./data/task.sqlite",
     "processor_path": "./models/preprocessors",
-    "model_path_path": "./models/classifiers"
+    "model_path": "./models/classifiers",
+    "features": [
+        "birthdate",
+        "education",
+        "employment_status",
+        "value",
+        "jobstartdate",
+        "position",
+        "monthprofit",
+        "monthexpense",
+        "gender",
+        "family_status",
+        "childcount",
+        "snils",
+        "merch_code",
+        "loan_amount",
+        "loan_term",
+        "goods_category"
+    ],
+    "features_to_init": {
+        "birthdate": "BirthDate",
+        "education": "education",
+        "employment_status": "employment status",
+        "value": "Value",
+        "jobstartdate": "JobStartDate",
+        "position": "Position",
+        "monthprofit": "MonthProfit",
+        "monthexpense": "MonthExpense",
+        "gender": "Gender",
+        "family_status": "Family status",
+        "childcount": "ChildCount",
+        "snils": "SNILS",
+        "merch_code": "Merch_code",
+        "loan_amount": "Loan_amount",
+        "loan_term": "Loan_term",
+        "goods_category": "Goods_category"
+    },
+    "banks": [
+        "bank_a",
+        "bank_b",
+        "bank_c",
+        "bank_d",
+        "bank_e"
+    ]
 }

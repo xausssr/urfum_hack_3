@@ -1,7 +1,7 @@
 from sqlite3 import Connection, Cursor
 from datetime import datetime as dt
 import hashlib
-from typing import List
+from typing import List, Union
 
 from core.data_structures import FeaturesStructure, Task
 
@@ -107,3 +107,24 @@ def check_task_state(task_id: str, cursor_db: Cursor, connection_db: Connection)
         return -1
     else:
         return int(res[2].strip() == "true")
+
+
+def get_task_result(task_id: str, cursor_db: Cursor, connection_db: Connection) -> Union[None, List]:
+    """Получение результата прескоринга из базы
+
+    Args:
+        task_id (str): id задачи
+        cursor_db (Cursor): курсор коннектора БД
+        connection_db (Connection): объект коннектора БД
+
+    Returns:
+        Dict[str, Any]: Данные прескоринга (сырые без заголовков)
+    """
+
+    res = cursor_db.execute(f"SELECT * FROM prescore WHERE task_id='{task_id}';")
+    connection_db.commit()
+    res = res.fetchone()
+    if res is None:
+        return None
+    else:
+        return list(res)

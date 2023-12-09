@@ -1,10 +1,18 @@
 import json
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import sqlite3
 
 from core.data_structures import FeaturesStructure, Task
-from core.utils import check_task_state, get_or_create_task, verify_task_table, verify_data_table, verify_prescore_table
+from core.utils import (
+    check_task_state,
+    get_or_create_task,
+    get_task_result,
+    verify_task_table,
+    verify_data_table,
+    verify_prescore_table,
+)
 
 CONFIG = json.load(open("./configs/api_config.json", "r", encoding="utf-8"))
 app = FastAPI()
@@ -72,8 +80,13 @@ async def get_result(task_id: str) -> str:
     Returns:
         str: аннотация
     """
-
-    raise HTTPException(status_code=404, detail="Task not found")
+    result = get_task_result(task_id, connection_db=connection_db, cursor_db=cursor_db)
+    if result:
+        reuslt = {k: v for k, v in zip(["task_id"] + CONFIG["banks"], result)}
+        json_compatible_item_data = jsonable_encoder(reuslt)
+        return JSONResponse(content=json_compatible_item_data)
+    else:
+        raise HTTPException(status_code=404, detail="Task not found")
 
 
 if __name__ == "__main__":
