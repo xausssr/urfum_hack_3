@@ -6,6 +6,23 @@ from typing import List
 from core.data_structures import FeaturesStructure, Task
 
 
+def verify_prescore_table(cursor_db: Cursor, connection_db: Connection, columns: List[str]) -> None:
+    """Верификация таблицы с пре-скорингом, если таблицы нет - создание новой
+
+    Args:
+        cursor_db (Cursor): курсор коннектора БД
+        connection_db (Connection): объект коннектора БД
+        colums (Dict[str, Any]): список колонок банков
+    """
+
+    res = cursor_db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='prescore';")
+    cols = ",".join(["task_id TEXT"] + columns)
+
+    if res.fetchone() is None:
+        cursor_db.execute(f"CREATE TABLE prescore({cols})")
+    connection_db.commit()
+
+
 def verify_data_table(cursor_db: Cursor, connection_db: Connection, columns: List[str]) -> None:
     """Верификация таблицы с данными, если таблицы нет - создание новой
 
@@ -67,7 +84,6 @@ def get_or_create_task(features: FeaturesStructure, cursor_db: Cursor, connectio
         )
         task = Task(task_id=task_id, is_complete=False)
     else:
-        print("хеши совпали")
         task = Task(task_id=task_id, is_complete=True)
     connection_db.commit()
     return task

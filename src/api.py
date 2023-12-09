@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 import sqlite3
 
 from core.data_structures import FeaturesStructure, Task
-from core.utils import check_task_state, get_or_create_task, verify_task_table, verify_data_table
+from core.utils import check_task_state, get_or_create_task, verify_task_table, verify_data_table, verify_prescore_table
 
 CONFIG = json.load(open("./configs/api_config.json", "r", encoding="utf-8"))
 app = FastAPI()
@@ -13,6 +13,7 @@ connection_db = sqlite3.connect(CONFIG["data_base"])
 cursor_db = connection_db.cursor()
 
 verify_data_table(cursor_db=cursor_db, connection_db=connection_db, columns=CONFIG["features"])
+verify_prescore_table(cursor_db=cursor_db, connection_db=connection_db, columns=CONFIG["banks"])
 verify_task_table(cursor_db=cursor_db, connection_db=connection_db)
 
 

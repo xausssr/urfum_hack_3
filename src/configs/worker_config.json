@@ -1,0 +1,5 @@
+{
+    "data_base": "./data/task.sqlite",
+    "processor_path": "./models/preprocessors",
+    "model_path_path": "./models/classifiers"
+}
