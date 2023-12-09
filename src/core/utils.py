@@ -1,7 +1,7 @@
 from sqlite3 import Connection, Cursor
 from datetime import datetime as dt
 import hashlib
-from typing import List
+from typing import Any, Dict, List
 
 from core.data_structures import Task
 
@@ -40,11 +40,11 @@ def verify_task_table(cursor_db: Cursor, connection_db: Connection) -> None:
     connection_db.commit()
 
 
-def get_or_create_task(text: str, cursor_db: Cursor, connection_db: Connection) -> Task:
-    """Получение аннотации, если статья с таким кешем уже была обработана или создание новой задачи
+def get_or_create_task(features: Dict[str, Any], cursor_db: Cursor, connection_db: Connection) -> Task:
+    """Получение пре-скоринга, если анкета с таким кешем уже была обработана или создание новой задачи
 
     Args:
-        text (str): текст для аннотации
+        features (str): данные для предсказания (см. FeaturesStructure)
         cursor_db (Cursor): курсор коннектора БД
         connection_db (Connection): объект коннектора БД
 
@@ -53,12 +53,12 @@ def get_or_create_task(text: str, cursor_db: Cursor, connection_db: Connection) 
     """
 
     _sha1 = hashlib.sha1()
-    _sha1.update(str.encode(text))
+    _sha1.update(str.encode(str(features)))
     task_id = _sha1.hexdigest()
     res = cursor_db.execute(f"SELECT * FROM tasks WHERE task_id='{task_id}';")
+
     if res.fetchone() is None:
-        with open(f"./data/texts/{task_id}.text", "w") as f:
-            f.write(text)
+        # TODO вставка в табличку
         cursor_db.execute(
             f"INSERT INTO tasks (task_id,timestamp,is_complete) VALUES ('{task_id}', '{dt.now().timestamp()}', false)"
         )
