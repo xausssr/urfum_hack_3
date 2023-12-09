@@ -6,7 +6,7 @@ import sqlite3
 from core.data_structures import FeaturesStructure, Task
 from core.utils import check_task_state, get_or_create_task, verify_task_table, verify_data_table
 
-CONFIG = json.load("./configs/api_config.json")
+CONFIG = json.load(open("./configs/api_config.json", "r", encoding="utf-8"))
 app = FastAPI()
 
 connection_db = sqlite3.connect(CONFIG["data_base"])
@@ -78,4 +78,4 @@ async def get_result(task_id: str) -> str:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host=CONFIG["host"], port=CONFIG["port"])
+    uvicorn.run(app, host=CONFIG["host"], port=int(CONFIG["port"]))
