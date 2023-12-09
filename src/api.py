@@ -41,7 +41,7 @@ async def upload_features(request: FeaturesStructure) -> Task:
     Returns:
         Task: объект задачи (см. Task)
     """
-    return get_or_create_task(features=request.features, connection_db=connection_db, cursor_db=cursor_db)
+    return get_or_create_task(features=request, connection_db=connection_db, cursor_db=cursor_db)
 
 
 @app.get("/check_task", status_code=200)

@@ -11,8 +11,8 @@ class FeaturesStructure(BaseModel):
     )
     education: str = Query(None, description="Образование (текстом)")
     employment_status: str = Query(None, description="Род деятельности (рабочий по найму, свой бизнес)")
-    value: int = Query(None, description="Стаж работы в годах")
-    jobstartdate: int = Query(
+    value: str = Query(None, description="Стаж работы в годах")
+    jobstartdate: str = Query(
         None,
         description="Дата начала работы на текущей позиции 'YYYY-mm-dd HH:MM:SS.(s)'"
         + " - пример '2000-11-22 00:00:00.0000000'",
