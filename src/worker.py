@@ -78,7 +78,7 @@ class Worker:
         while True:
             self.get_task()
             if self.last_task_id is None:
-                time.sleep(5)
+                time.sleep(1)
             else:
                 self.predict()
 
