@@ -7,6 +7,8 @@ import pandas as pd
 
 from sklearn.preprocessing import OneHotEncoder
 
+from activity_bins import activity_bins
+
 
 def dump_or_load_object(path: str, obj: Any = None, force: bool = False) -> Any:
     """Дамп объекта или его загрузка, если он уже был сохранен
@@ -33,69 +35,218 @@ def dump_or_load_object(path: str, obj: Any = None, force: bool = False) -> Any:
 
 
 def basic_process(data: pd.DataFrame, columns_cat: Dict[str, List[str]], drop: bool = True) -> pd.DataFrame:
-    """Базовые преобразования
-        * дата рождения -> возраст (полных лет?)
-        * дата новой работы -> время пребывания на последней работе (лет ? 0 - меньше года)
-        * одобрение банка -> цифры (denied = 0, success = 1, error = 2)
-        * если вся строка nan - drop
-        * удаляем id
-        * Position - в нижний регистр + удалем пробелы
+    """Производит базовые преобразования набора данных.
 
     Args:
-        data (pd.DataFrame): датасет/данные
-        columns_cat (str, Dict[List[str]]): сортировка колонок
-        drop (bool): удалить исходные колонки? Defaults to False
+        data (pd.DataFrame): Исходные данные.
+        columns_cat (Dict[str, List[str]]): Сортировка колонок.
+        drop (bool): Удалить исходные колонки? Defaults to True.
 
     Returns:
-        (pd.DataFrame): преобразованный датасет/данные
+        pd.DataFrame: Преобразованные данные.
     """
+    # Удаление строк с отсутствующими значениями
+    data = data.dropna(how='all')
 
-    data["age"] = 2023 - pd.to_datetime(data["BirthDate"]).dt.year
-    data["last_work_years"] = 2023 - pd.to_datetime(data["JobStartDate"]).dt.year
-    data["Position"] = data["Position"].str.lower().str.strip()
+    # Возраст заемшика
+    data['age'] = 2023 - pd.to_datetime(data['BirthDate']).dt.year
 
-    drop_rows = lambda row: row.isna().sum() == data.shape[1]
-    data = data.drop(data[data.apply(drop_rows, axis=1)].index)
+    # Возрастной статус человека
+    def get_age_status(age, is_female):
+        minor_age = 17
+        adult_age = 18
+        pensioner_age_woman = 65
+        pensioner_age_man = 68
+
+        if age <= minor_age:
+            age_status = 'несовершеннолетний'
+        elif is_female:
+            if adult_age <= age < pensioner_age_woman:
+                age_status = 'трудоспособный'
+            else:
+                age_status = 'пенсионер'
+        else:
+            if adult_age <= age < pensioner_age_man:
+                age_status = 'трудоспособный'
+            else:
+                age_status = 'пенсионер'
+
+        return age_status
+
+    data['age_status'] = data.apply(lambda row: get_age_status(row['age'], row['Gender']), axis=1)
+
+    # Выделим недоучившихся в отдельную колонку 1 - Оконченное, 0 - Неоконченное
+    data['finished_education'] = data['education'].apply(lambda x: 0 if 'Неоконченное' in x else 1)
+
+    # Наличие высшего образования 0 - Нет, 1 - Есть
+    data['education_raiting'] = data['education'].replace({
+            "Высшее - специалист": 1,
+            "Среднее профессиональное": 0,
+            "Среднее": 0,
+            "Неоконченное высшее": 1,
+            "Бакалавр": 1,
+            "Несколько высших": 1,
+            "Магистр": 1,
+            "Неоконченное среднее": 0,
+            "MBA": 1,
+            "Ученая степень": 1
+            })
+
+    # Студенты
+    data['is_student'] = data['employment status'].apply(lambda x: 1 if 'Студент' in x else 0)
+
+    # пенсионеры
+    data['is_pensioner'] = data['employment status'].apply(lambda x: 1 if 'Пенсионер' in x else 0)
+
+    # в декрете
+    data['is_maternity_leave'] = data['employment status'].apply(lambda x: 1 if 'Декретный отпуск' in x else 0)
+
+    # Натятый рабочий
+    data['is_hired_worker'] = data['employment status'].apply(lambda x: 1 if 'Работаю по найму' in x else 0)
+
+    # Тунеядец
+    data['is_not_worker'] = data['employment status'].apply(lambda x: 1 if 'Не работаю' in x else 0)
+
+    # 0 - не полный рабочий день, 1 - полный рабочий день
+    data['is_works_full_time'] = data['employment status'].apply(lambda x: 1 if 'полный рабочий день' in x else 0)
+
+    # Самозанятый
+    data['is_self_employed'] = data['employment status'].apply(lambda x: 1 if 'Собственное дело' in x else 0)
+
+    data['Value'] = data['Value'].fillna('Не работал')
+
+    # Стаж работы от 10 лет и выше
+    data['experience_over_10_year'] = data['Value'].apply(lambda x: 1 if '10 и более лет' in x else 0)
+
+    data['JobStartDate'] = data['JobStartDate'].fillna(0)
+
+    data['last_work_years'] = 2023 - pd.to_datetime(data['JobStartDate']).dt.year
+
+    data['Position'] = data['Position'].fillna('нет должности')
+
+    # Переводим в нижний регистр и Удалить лишние пробелы в значениях столбиков
+    data['Position'] = data['Position'].str.strip().str.lower()
+
+    data['is_position'] = data['Position'].apply(lambda x: 1 if not 'нет должности' in x else 0)
+
+    data['Position'] = data['Position'].replace(activity_bins)
+
+    # Отноешние ЗП к среднему доходу
+    average_income = 70.3
+    data['salary_to_avg_income_Ratio'] = data['MonthProfit'] / average_income
+
+    # Заполняем пропуски по медиане
+    data['Family status'] = data['Family status'].fillna(data['Family status'].mode()[0])
+
+    data['ChildCount'] = data['ChildCount'].fillna(data['ChildCount'].mode()[0])
+
+    data['Gender'] = data['Gender'].fillna(data['Gender'].mode()[0])
+
+    # Отношение возроста гражданина к Среднему значению возраста россиян, которые вступают в брак
+    def get_age_to_average_marriage_age_ratio(gender, age):
+        average_men = 25.4
+        average_woman = 23.2
+        if gender:
+            age_to_average_marriage_age_ratio = age / average_woman
+        else:
+            age_to_average_marriage_age_ratio = age / average_men
+        return age_to_average_marriage_age_ratio
+            
+    data['age_to_average_marriage_age_ratio'] = data.apply(
+        lambda row: get_age_to_average_marriage_age_ratio(row['Gender'], row['age']), axis=1)
+
+    def get_single_parent(family_status, child_count):
+        single_parent_arr = ['Никогда в браке не состоял(а)',
+                             'Разведён / Разведена',
+                             'Вдовец / вдова']
+
+        return 1 if family_status in single_parent_arr and child_count > 0 else 0
+
+    # Родители одиночки
+    data['is_single_parent'] = data.apply(
+        lambda row: get_single_parent(row['Family status'], row['ChildCount']), axis=1)
+
+    # Многодетные семьи
+    data['large_family'] = data['ChildCount'].apply(lambda x: 1 if x > 2 else 0)
+
+    # В браке
+    data['is_married'] = data.apply(
+        lambda row: 1 if row['Family status'] == 'Женат / замужем' else 0, axis=1)
+    # Были в браке
+    # Суды, наследство, кредиты долги
+    data['was_married'] = data.apply(
+        lambda row: 1 if row['Family status'] in ['Разведён / Разведена', 'Вдовец / вдова'] else 0,
+        axis=1
+        )
+    # Живет С/Без Парнера
+    # Есть кому финансово помочь
+    data['living_with_partner'] = data.apply(
+        lambda row: 1 if row['Family status'] in ['Женат / замужем', 'Гражданский брак / совместное проживание'] else 0,
+        axis=1
+        )
+
+    def get_family_mrot(age_status, child_count, is_married):
+        child_mrot = 13944
+        worked_mrot = 15669
+        pensioner_mrot = 12363
+
+        # для женщин
+        if age_status == 'трудоспособный':
+            family_mrot = worked_mrot + child_count * child_mrot + is_married * worked_mrot
+        elif age_status == 'пенсионер':
+            family_mrot = pensioner_mrot + child_count * child_mrot + is_married * worked_mrot
+        else:
+            family_mrot = child_mrot + child_count * child_mrot + is_married * worked_mrot
+
+        return family_mrot
+    data['family_mrot'] = data.apply(
+        lambda row: get_family_mrot(row['age_status'], row['ChildCount'], row['is_married']),
+        axis=1
+        )
+
+    # Возможно платит элименты
+    data['is_possibly_pays_bills'] = data.apply(
+        lambda row: 1 if row['Family status'] in ['Никогда в браке не состоял(а)', 'Разведён / Разведена', 'Вдовец / вдова'] and row['ChildCount'] else 0,
+        axis=1
+        )
+
+    # Показатель отношения возроста к среднему возрасту заболеванию раком 65
+    age_cancer = 65
+    data['Age/Cancer_Incidence_Ratio'] = data.apply(lambda row: row['age'] / age_cancer, axis=1)
 
     if drop:
-        data = data.drop(columns=["BirthDate", "JobStartDate"])
+        data = data.drop(columns=['BirthDate', 'JobStartDate', 'Position', 'employment status', 'Family status'])
     return data
 
 
 def process_nan(data: pd.DataFrame) -> pd.DataFrame:
-    """Добавление колоноки с числом пропусков, замена пропусков на -1
+    """Добавляет колонку с числом пропусков и заменяет пропуски на -1.
+
     Args:
-        data (pd.DataFrame): датасет/данные
+        data (pd.DataFrame): Исходные данные.
 
     Returns:
-        (pd.DataFrame): преобразованный датасет/данные
+        pd.DataFrame: Преобразованные данные.
     """
-
     return data.fillna(-1)
 
 
 def add_features(data: pd.DataFrame) -> pd.DataFrame:
-    """
-    Добавление фичей:
-        * отношение доход/расход
-        * отношение объем кредита/срок кредита
-        * отношение (доход - расход) / (объем кредита/срок кредита)
+    """Добавляет новые признаки в данные.
 
     Args:
-        data (pd.DataFrame): данные
+        data (pd.DataFrame): Исходные данные.
 
     Returns:
-        (pd.DataFrame): данные, обогощенные фичами
+        pd.DataFrame: Данные с новыми признаками.
     """
 
     data["profit_expense"] = data["MonthProfit"] / data["MonthExpense"]
     data["loan_term_amount"] = data["Loan_amount"] / data["Loan_term"]
     data["month_load"] = (data["MonthProfit"] - data["MonthExpense"]) / (data["Loan_amount"] / data["Loan_term"])
 
-    # проверям на бесконечность
-    data[data["profit_expense"] == np.inf] = -1
-    data[data["loan_term_amount"] == np.inf] = -1
-    data[data["month_load"] == np.inf] = -1
+    # Проверка на бесконечные значения и их замена на -1
+    data.replace([np.inf, -np.inf], -1, inplace=True)
     return data
 
 
