@@ -1,0 +1,10 @@
+FROM python:3.10-slim-buster
+
+WORKDIR /worker
+
+COPY . /worker
+COPY requirements_worker.txt /worker/requirements_worker.txt
+
+RUN pip3 install -r /worker/requirements_worker.txt
+
+CMD ["python3", "worker.py"]

@@ -1,0 +1,12 @@
+FROM python:3.10-slim-buster
+
+WORKDIR /prescoring_api
+
+COPY . /prescoring_api
+COPY requirements_api.txt /prescoring_api/requirements_api.txt
+
+RUN pip3 install -r /prescoring_api/requirements_api.txt
+
+EXPOSE 8000
+
+CMD ["python3", "api.py"]
