@@ -7,6 +7,6 @@ COPY requirements_worker.txt /worker/requirements_worker.txt
 
 RUN pip3 install -r /worker/requirements_worker.txt
 
-#CMD ["python3", "worker.py"]
-ENTRYPOINT ["tail"]
-CMD ["-f","/dev/null"]
+CMD ["python3", "worker.py"]
+#ENTRYPOINT ["tail"]
+#CMD ["-f","/dev/null"]

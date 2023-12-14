@@ -220,7 +220,7 @@ def basic_process(data: pd.DataFrame, columns_cat: Dict[str, List[str]], drop: b
     data['Age/Cancer_Incidence_Ratio'] = data.apply(lambda row: row['age'] / age_cancer, axis=1)
 
     if drop:
-        data = data.drop(columns=['BirthDate', 'JobStartDate', 'Position', 'employment status', 'Family status'])
+        data = data.drop(columns=['BirthDate', 'JobStartDate'])
     return data
 
 
@@ -296,14 +296,12 @@ class ModelInference:
         Returns:
             (pd.DataFrame): данные, обогощенные фичами
         """
+
         data = basic_process(data, self.columns_cat)
         data = process_nan(data)
-        print('!!!!!!!!!!!!model!!!!!!!!!')
-        print(data)
+
         data[self.columns_cat["cat"]] = self.cat_preprocessor.transform(data[self.columns_cat["cat"]].astype(str))
 
-        print('!!!!!!!!!!!!onehot!!!!!!!!!')
-        print(data)
         data = add_features(data)
 
 

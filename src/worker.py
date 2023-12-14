@@ -63,8 +63,7 @@ class Worker:
             if col in in_data.columns:
                 in_data[col] = in_data[col].astype(float)
 
-        # предикт
-        print(in_data)
+
         answ = self.inference.predict(in_data, banks=self.settings["banks"])
         cols = ",".join([f"'{x}'" for x in answ.keys()])
         values = ",".join([f"'{x}'" for x in answ.values()])
