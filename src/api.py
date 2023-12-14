@@ -1,4 +1,5 @@
 import json
+import os
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -16,6 +17,10 @@ from core.utils import (
 
 CONFIG = json.load(open("./configs/api_config.json", "r", encoding="utf-8"))
 app = FastAPI()
+
+folder = CONFIG["folder_data_base"]
+if not os.path.exists(folder):
+    os.makedirs(folder, exist_ok=True)
 
 connection_db = sqlite3.connect(CONFIG["data_base"])
 cursor_db = connection_db.cursor()

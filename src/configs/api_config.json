@@ -1,5 +1,6 @@
 {
     "data_base": "./data/task.sqlite",
+    "folder_data_base": "./data",
     "features": [
         "birthdate",
         "education",
