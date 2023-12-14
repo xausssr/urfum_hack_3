@@ -45,8 +45,9 @@ def basic_process(data: pd.DataFrame, columns_cat: Dict[str, List[str]], drop: b
     Returns:
         pd.DataFrame: Преобразованные данные.
     """
-    # Удаление строк с отсутствующими значениями
-    data = data.dropna(how='all')
+    #удаление пропусков
+    drop_rows = lambda row: row.isna().sum() == data.shape[1]
+    data = data.drop(data[data.apply(drop_rows, axis=1)].index)
 
     # Возраст заемшика
     data['age'] = 2023 - pd.to_datetime(data['BirthDate']).dt.year
@@ -75,6 +76,8 @@ def basic_process(data: pd.DataFrame, columns_cat: Dict[str, List[str]], drop: b
 
     data['age_status'] = data.apply(lambda row: get_age_status(row['age'], row['Gender']), axis=1)
 
+    data['education'] = data['education'].fillna('Неоконченное среднее')
+
     # Выделим недоучившихся в отдельную колонку 1 - Оконченное, 0 - Неоконченное
     data['finished_education'] = data['education'].apply(lambda x: 0 if 'Неоконченное' in x else 1)
 
@@ -91,6 +94,8 @@ def basic_process(data: pd.DataFrame, columns_cat: Dict[str, List[str]], drop: b
             "MBA": 1,
             "Ученая степень": 1
             })
+
+    data['employment status'] = data['employment status'].fillna('Не работаю')
 
     # Студенты
     data['is_student'] = data['employment status'].apply(lambda x: 1 if 'Студент' in x else 0)
@@ -245,8 +250,10 @@ def add_features(data: pd.DataFrame) -> pd.DataFrame:
     data["loan_term_amount"] = data["Loan_amount"] / data["Loan_term"]
     data["month_load"] = (data["MonthProfit"] - data["MonthExpense"]) / (data["Loan_amount"] / data["Loan_term"])
 
-    # Проверка на бесконечные значения и их замена на -1
-    data.replace([np.inf, -np.inf], -1, inplace=True)
+    # проверям на бесконечность
+    data[data["profit_expense"] == np.inf] = -1
+    data[data["loan_term_amount"] == np.inf] = -1
+    data[data["month_load"] == np.inf] = -1
     return data
 
 
@@ -291,8 +298,14 @@ class ModelInference:
         """
         data = basic_process(data, self.columns_cat)
         data = process_nan(data)
+        print('!!!!!!!!!!!!model!!!!!!!!!')
+        print(data)
         data[self.columns_cat["cat"]] = self.cat_preprocessor.transform(data[self.columns_cat["cat"]].astype(str))
+
+        print('!!!!!!!!!!!!onehot!!!!!!!!!')
+        print(data)
         data = add_features(data)
+
 
         if add_none:
             for col in data.columns:
@@ -334,6 +347,7 @@ class ModelInference:
         """
 
         preprocessed_data = self.preprocess(x, add_none=False)
+
         results = {}
         for idx, clf in enumerate(self.models.values()):
             results[banks[idx]] = clf.predict_proba(preprocessed_data)[0, 1]

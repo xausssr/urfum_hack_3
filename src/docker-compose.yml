@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+    api:
+        build:
+            context: .
+            dockerfile: DockerfileApi
+        image: api
+        container_name: precsoring-api
+        restart: always
+        ports:
+            - 8000:8000
+        volumes:
+          - data:/prescoring_api/data
+    worker:
+        build:
+            context: .
+            dockerfile: DockerfileWorker
+        image: worker
+        container_name: precsoring-w1
+        restart: always
+        volumes:
+          - data:/worker/data
+
+volumes:
+  data:
