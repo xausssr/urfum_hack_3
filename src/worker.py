@@ -26,6 +26,7 @@ class Worker:
         verify_worker_table(cursor_db=self.cursor_db, connection_db=self.connection_db)
 
     def get_task(self):
+        print('get_task')
         """Получение новой задачи"""
         res_task = self.cursor_db.execute("SELECT * FROM tasks WHERE is_complete=false;")
         res_task = res_task.fetchall()
@@ -52,6 +53,7 @@ class Worker:
 
         # формирование строки pd.DataFrame
         in_data = self.cursor_db.execute(f"SELECT * FROM features WHERE task_id='{self.last_task_id}';")
+        
         in_data = in_data.fetchall()[0][1:]
         in_data = pd.DataFrame(
             [in_data], columns=[self.settings["features_to_init"][x] for x in self.settings["features"]]
@@ -60,7 +62,7 @@ class Worker:
             if col in in_data.columns:
                 in_data[col] = in_data[col].astype(float)
 
-        # предикт
+
         answ = self.inference.predict(in_data, banks=self.settings["banks"])
         cols = ",".join([f"'{x}'" for x in answ.keys()])
         values = ",".join([f"'{x}'" for x in answ.values()])
