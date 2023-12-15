@@ -49,7 +49,6 @@ class Worker:
             self.connection_db.commit()
 
     def predict(self) -> None:
-        print('predict')
         """Получение пре-скоринга для задачи (self.last_task_id)"""
 
         # формирование строки pd.DataFrame

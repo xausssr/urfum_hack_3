@@ -106,10 +106,7 @@ def check_task_state(task_id: str, cursor_db: Cursor, connection_db: Connection)
     if res is None:
         return -1
     else:
-        print(res)
-        print(res[2] == "true")
-        return res[2] == "true"
-        #return int(str(res[2]).strip() == "true")
+        return int(res[2].strip() == "true")
 
 
 def get_task_result(task_id: str, cursor_db: Cursor, connection_db: Connection) -> Union[None, List]:
@@ -128,10 +125,6 @@ def get_task_result(task_id: str, cursor_db: Cursor, connection_db: Connection) 
     connection_db.commit()
     res = res.fetchone()
     if res is None:
-        # Log that no result was found for the task_id
-        print(f"No result found for task_id: {task_id}")
         return None
     else:
-        # Log the retrieved result for debugging purposes
-        print(f"Result found for task_id {task_id}: {list(res)}")
         return list(res)
